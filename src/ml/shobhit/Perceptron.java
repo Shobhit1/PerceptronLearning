@@ -13,8 +13,8 @@ public class Perceptron {
 
 	static String stopWordsPath = System.getProperty("user.dir") + System.getProperty("file.separator")+ "stopWords.txt";
 	public HashMap<String, HashMap<String,Integer>> tokenHashMap = new HashMap<>();
-	public int countSpam = 0;
-	public int countHam = 0;
+	//	public int countSpam = 0;
+	//	public int countHam = 0;
 
 	/**
 	 * Function to calculate the vocab from all the files whether
@@ -85,7 +85,8 @@ public class Perceptron {
 					Scanner scan = null;
 					try {
 						scan = new Scanner(f);
-						scan.useDelimiter("[^a-zA-Z']+");
+						//												scan.useDelimiter("[^a-zA-Z']+");
+						scan.useDelimiter("\\s+");
 						while(scan.hasNext()){
 							String word = scan.next();
 							if(stopWordCheck){
@@ -115,13 +116,13 @@ public class Perceptron {
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
-					scan.close();
-					if(file.getName().equalsIgnoreCase("ham")){
-						countHam++;
-					}
-					else{
-						countSpam++;
-					}
+					//					scan.close();
+					//					if(file.getName().equalsIgnoreCase("ham")){
+					//						countHam++;
+					//					}
+					//					else{
+					//						countSpam++;
+					//					}
 				}
 			}
 			//
@@ -132,7 +133,8 @@ public class Perceptron {
 				Scanner scan = null;
 				try {
 					scan = new Scanner(file);
-					scan.useDelimiter("[^a-zA-Z']+");
+					//										scan.useDelimiter("[^a-zA-Z']+");
+					scan.useDelimiter("\\s+");
 
 					while(scan.hasNext()){
 						String word = scan.next();
@@ -213,8 +215,8 @@ public class Perceptron {
 		Set<String> vocab = makeVocab(path,stopWordCheck);
 		//		System.out.println(vocab.size());
 		for(String word : vocab){
-			double weight = (rand.nextDouble());		//assigning random value between -1 and 1 to the weight
-			//			double weight = 0.0;									//assigning 0 to weights
+			double weight = -1 + rand.nextDouble();//assigning random value between -1 and 1 to the weight
+			//						double weight = 0.0;									//assigning 0 to weights
 			weightMap.put(word, weight);
 		}
 
@@ -291,58 +293,64 @@ public class Perceptron {
 	 * on test set
 	 */
 
-	public HashMap<String, Double> learn(String path, boolean stopWordCheck){
+	public HashMap<String, Double> learn(String path, boolean stopWordCheck, int noOfIterations, double learningRate){
 		File file = new File(path);
+
 		HashMap<String,Double> weightMap = weightsAssignment(path, stopWordCheck);
+
+		HashMap<Integer,HashMap<String,Integer>> wordHamCount = null;
+		HashMap<Integer,HashMap<String,Integer>> wordSpamCount = null;
 		HashMap<Integer,HashMap<String,Integer>> wordCount = null;
 
 		File[] directories = file.listFiles();
 
-		int target = 0;
-		int output = 0;
-		double learningRate = 0.1;
+		if(directories[0].getName().charAt(0) == '.'){
 
+			wordHamCount = wordCountInEachFile(directories[1], stopWordCheck);
+			wordSpamCount = wordCountInEachFile(directories[2], stopWordCheck);
+		}
+		else{
+			wordHamCount = wordCountInEachFile(directories[0], stopWordCheck);
+			wordSpamCount = wordCountInEachFile(directories[1], stopWordCheck);
+		}
 
-		for(File directory : directories){
-			if(directory.getName().charAt(0) != '.'){
-				wordCount = wordCountInEachFile(directory, stopWordCheck);
-				if(directory.getName().equals("ham")){
-					target = 1;
-				}
-				else{
-					target = -1;
-				}
+		int i = 0;
+		while(i< noOfIterations){
+			i++;
+			for(File directory : directories){
+				double target = 0;
+				double output = 0;
 
-				File[] files = directory.listFiles();
+				if(directory.getName().charAt(0) != '.'){
 
-				for(int i=0; i< 10000; i++){
-					//					int fileNumber = 0;
-
-					//					for(File f : files)
-					for(int fileNumber = 0; fileNumber < files.length; fileNumber++)
+					if(directory.getName().equalsIgnoreCase("ham")){
+						target = 1;
+						wordCount = wordHamCount;
+					}
+					else{
+						target = -1;
+						wordCount = wordSpamCount;
+					}
+					double weight = 0.0;
+					Integer count = 0;
+					for(Integer fileNumber : wordCount.keySet())
 					{
-						double sum = 0;
-						double weight = 0.0;
-						Integer count = 0;
-						double bias = 0.5;
-						//						ArrayList<String> words = wordsInFile(f, stopWordCheck);
+
+
+						//						double bias = 0.5;
 
 						HashMap<String, Integer> wordCountForFile = wordCount.get(fileNumber); 
-						Set<String> words = wordCountForFile.keySet();
-						fileNumber++;
-
-						for(String word: words){
+						//						fileNumber++;
+						double sum = 0;
+						for(String word: wordCountForFile.keySet()){
 							if(weightMap.containsKey(word)){
 								weight = weightMap.get(word);
 							}
-							if(wordCountForFile.containsKey(word)){
-								count = wordCountForFile.get(word);
-							}
+							//if(wordCountForFile.containsKey(word)){
+							count = wordCountForFile.get(word);
 
-							if(count == null){
-								count = 0;
-							}
-							sum += bias + weight*count;
+							//							sum += bias + weight*count;
+							sum += weight*count;
 						}
 
 						if(sum > 0){
@@ -351,27 +359,22 @@ public class Perceptron {
 						else{
 							output = -1;
 						}
-						
-						
+
+
 						if(target != output){
-							double weight2 = 0.0;
-							for(String word : words){
+							//							double weight2 = 0.0;
+							for(String word : wordCountForFile.keySet()){
 
-								if(weightMap.containsKey(word)){
-									weight2 = weightMap.get(word);
-								}
+								//								if(weightMap.containsKey(word)){
+								weight = weightMap.get(word);
+								//								}
+								count = wordCountForFile.get(word);
 
-								if(wordCountForFile.containsKey(word)){
-									count = wordCountForFile.get(word);
-								}
 
-								if(count == null){
-									count = 0;
-								}
 								double change = learningRate * (target - output);
-								bias += change;
+								//																bias += change;
 								double changeInWeight = change * count;
-								double weightNew = weight2 + changeInWeight;
+								double weightNew = weight + changeInWeight;
 								weightMap.put(word, weightNew);
 							}
 						}
@@ -383,27 +386,36 @@ public class Perceptron {
 	}
 
 
-	public double test(String learningPath, String testingPath, boolean stopWordCheck){
-		int success = 0;
-		int total = 0;
-		Integer count = 0;
-		double weight = 0.0;
+	public double test(HashMap<String, Double> learnedWeightMap,String learningPath, String testingPath, boolean stopWordCheck){
+		double success = 0;
+		double total = 0;
 
-		String fileResult = "";
-		HashMap<String, Double> learnedWeightMap = learn(learningPath, stopWordCheck);
 		HashMap<Integer,HashMap<String,Integer>> wordCount = null;
 
 		File file = new File(testingPath);
 		File[] directories = file.listFiles();
 
 		for(File directory: directories){
+			Integer count = 0;
+			double weight = 0.0;
+			double result = 0.0;
+//			String fileResult ;
 			if(directory.getName().charAt(0) != '.'){
+				int target;
+				int output;
+				if(directory.getName().equalsIgnoreCase("ham")){
+					target = 1;
+				}
+				else{
+					target = -1;
+				}
 				wordCount = wordCountInEachFile(directory, stopWordCheck);
-				File[] files = directory.listFiles();
+				//				File[] files = directory.listFiles();
 				//				int fileNumber = 0;
 				//				for(File f : files){
-				for(int fileNumber=0; fileNumber < files.length; fileNumber++){
-					double result = 0.0;
+
+				for(Integer fileNumber : wordCount.keySet()){
+
 					total++;
 					//					ArrayList<String> words = wordsInFile(f, stopWordCheck);
 
@@ -426,15 +438,14 @@ public class Perceptron {
 					}
 
 					if(result < 0){
-						fileResult = "ham";
+						output = 1;
 					}
 					else{
-						fileResult = "spam";
+						output = -1;
 					}
 
-					if(fileResult.equals(directory.getName())){
+					if(target == output){
 						success++;
-						//						System.out.println(success + " success Count");
 					}
 
 				}
@@ -443,15 +454,36 @@ public class Perceptron {
 		return (double)success/total;
 	}
 
-	public static void main(String[] args) {
-		String learningPath = "/Users/shobhitagarwal/Dropbox/UTD/Sem-2/Machine Learning/Project/Project 3/enron1/train";
-		String testingPath = "/Users/shobhitagarwal/Dropbox/UTD/Sem-2/Machine Learning/Project/Project 3/enron1/test";
+
+	public static void run(String learnDirectoryPath, String testDirectoryPath,boolean stopWordCheck, double learningRate,int noOfIterations){
 		Perceptron p = new Perceptron();
+		HashMap<String, Double> learnedWeightMap = p.learn(learnDirectoryPath, stopWordCheck, noOfIterations,learningRate);
+		System.out.println(p.test(learnedWeightMap,learnDirectoryPath, testDirectoryPath, stopWordCheck));
+	}
+
+	public static void main(String[] args) {
+//		String learningPath = "/Users/shobhitagarwal/Dropbox/UTD/Sem-2/Machine Learning/Project/Project 3/enron1/train";
+//		String testingPath = "/Users/shobhitagarwal/Dropbox/UTD/Sem-2/Machine Learning/Project/Project 3/enron1/test";
+		String learningPath =  System.getProperty("user.dir") + System.getProperty("file.separator")+args[0];
+		String testingPath =  System.getProperty("user.dir") + System.getProperty("file.separator")+args[1];
+		double learningRate = Double.parseDouble(args[2]);
+		int iterations = Integer.parseInt(args[3]);
+		boolean stopWords = false;
+		if(args[4].equalsIgnoreCase("yes")){
+			stopWords = true;
+		}
+//		Double[] learningRate = {0.1, 0.15, 0.125, 0.1, 0.09, 0.08, 0.085,0.095, 0.096, 0.097, 0.098, 0.099,0.091,0.092,0.093,0.094,0.11,0.12,0.13,0.14 };
+//		int[] iterations = {34,39,38,33,39,38,36,44,102,150,200,250,37,29,64,194,18,57,34,36};
+//		timer();
+//		int i=0;
+//		int j=0;
 		timer();
-		System.out.println(p.test(learningPath, testingPath, false));
+//		while(i<learningRate.length && j<iterations.length){
+			run(learningPath, testingPath, stopWords, learningRate, iterations);
+//			i++;
+//			j++;
+//		}
+
 		timer();
-		//		System.out.println(weightsAssg.toString());
-		System.out.println("-----------");
-		//		System.out.println(weightLearn.toString());
 	}
 }

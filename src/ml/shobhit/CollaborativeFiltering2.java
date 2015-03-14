@@ -10,8 +10,8 @@ public class CollaborativeFiltering2 {
 
 	private static int phase = 0;
 	private static long startTime, endTime, elapsedTime;
-	private static String path = "/Users/shobhitagarwal/Dropbox/UTD/Sem-2/Machine Learning/Project/Project 3/netflix/TrainingRatings.txt";
-	private static String pathTest = "/Users/shobhitagarwal/Dropbox/UTD/Sem-2/Machine Learning/Project/Project 3/netflix/TestingRatings Copy.txt";
+//	private static String path = "/Users/shobhitagarwal/Dropbox/UTD/Sem-2/Machine Learning/Project/Project 3/netflix/TrainingRatings.txt";
+//	private static String pathTest = "/Users/shobhitagarwal/Dropbox/UTD/Sem-2/Machine Learning/Project/Project 3/netflix/TestingRatings Copy.txt";
 
 	public static void timer()
 	{
@@ -108,7 +108,7 @@ public class CollaborativeFiltering2 {
 		HashMap<String, Double> mapForUserA = data.get(userA);
 		HashMap<String, Double> mapForUserI = data.get(userI);
 
-//		HashMap<String,Double> meanVoteMap = meanVoteMap(data);
+		//		HashMap<String,Double> meanVoteMap = meanVoteMap(data);
 
 		double meanVoteUserA = meanVoteMap.get(userA);
 		double meanVoteUserI = meanVoteMap.get(userI);
@@ -141,40 +141,40 @@ public class CollaborativeFiltering2 {
 		}
 		return result;
 	}
-	
+
 	/*
 	 * Prediction Function
 	 */
-	
-	public double predictRating(HashMap<String, HashMap<String, Double>> data,HashMap<String,Double> meanVoteMap, MovieBean bean){
-		String userPredicting = bean.getUserId();
-		String movieToBePredicted = bean.getMovieId();
-		
+
+	public double predictRating(HashMap<String, HashMap<String, Double>> data,HashMap<String,Double> meanVoteMap, String user, String movie){
+		String userPredicting = user;
+		String movieToBePredicted = movie;
+
 		double k = 0.1;
 		double sum = 0.0;
-		
-//		HashMap<String,Double> meanVoteMap = meanVoteMap(data);
+
+		//		HashMap<String,Double> meanVoteMap = meanVoteMap(data);
 		double meanRatingForUserPredicting = meanVoteMap.get(userPredicting);
-		
-		ArrayList<String> usersForMovie = listOfUserVotingForParticularMovie(data, movieToBePredicted);
-		
+
+		ArrayList<String> usersForMovie = listOfUserVotingForParticularMovie(data, movie);
+
 		double weightCorelation = 0.0;
-		
-		for(String user : usersForMovie){
-			weightCorelation = coRelationBetweenUsers(data, meanVoteMap, userPredicting, user);
-			weightCorelation = weightCorelation * (data.get(user).get(movieToBePredicted) - meanVoteMap.get(user));
-			
+
+		for(String userLoop : usersForMovie){
+			weightCorelation = coRelationBetweenUsers(data, meanVoteMap, userPredicting, userLoop);
+			weightCorelation = weightCorelation * (data.get(userLoop).get(movieToBePredicted) - meanVoteMap.get(userLoop));
+
 			sum += weightCorelation;
 		}
-		
+
 		return (meanRatingForUserPredicting + (k*sum));
 	}
-	
-	
+
+
 	/*
 	 * Reading Test data as bean
 	 */
-	
+/*
 	public ArrayList<MovieBean> testDataRead(String testPath){
 		ArrayList<MovieBean> movieRatingList = new ArrayList<MovieBean>();
 		Scanner scan = null;
@@ -195,51 +195,63 @@ public class CollaborativeFiltering2 {
 		scan.close();
 		return movieRatingList;
 	}
-	
+*/
 	/**
 	 * Accuracy Function
 	 * 
 	 */
-	
+
 	public double testing(HashMap<String, HashMap<String,Double>> trainingData, String testingPath){
 		HashMap<String, Double> meanVoteMapTrainData = meanVoteMap(trainingData);
-//		HashMap<String, HashMap<String, Double>> testData = dataBasedOnUser(testingPath);
-		
-		ArrayList<MovieBean> testDataAsBeans = testDataRead(testingPath);
-		double sum = 0;
-		
-//		Set<String> usersForTesting = testData.keySet();
-		
-		for(MovieBean bean: testDataAsBeans){
-			double ratingNow = bean.getRating();
-			double predictedRating = predictRating(trainingData, meanVoteMapTrainData, bean);
-			System.out.println("pred " + predictedRating);
-			System.out.println("Rating " + ratingNow);
-			sum += Math.abs(predictedRating - (ratingNow));
-			
-		}
-		
-//		System.out.println(testDataAsBeans.size());
-		double MAE = sum/testDataAsBeans.size();
+		HashMap<String, HashMap<String, Double>> testData = dataBasedOnUser(testingPath);
 
-		double RMSD = Math.sqrt(MAE);
+//		ArrayList<MovieBean> testDataAsBeans = testDataRead(testingPath);
+		double sum = 0;
+		double temp=0;
+
+		//		Set<String> usersForTesting = testData.keySet();
+
+		//		for(MovieBean bean: testDataAsBeans){
+		//HashMap<String, Double> tempData = null;
+		for(String user: testData.keySet()){
+			
+			for(String movie: testData.get(user).keySet()){
+				double ratingNow = testData.get(user).get(movie);
+				double predictedRating = predictRating(trainingData, meanVoteMapTrainData, user, movie);
+				System.out.println("pred " + predictedRating);
+				System.out.println("Rating " + ratingNow);
+				double temp2 = predictedRating - (ratingNow);
+				temp += Math.pow((temp2), 2); 
+				sum += Math.abs(temp2);
+			}
+
+
+		}
+
+		//		System.out.println(testDataAsBeans.size());
+		double MAE = sum/testData.size();
+
+		double RMSE = Math.sqrt(temp/testData.size());
 
 		System.out.println("MAE :  " + MAE);
-		System.out.println("RMSD : " + RMSD);
+		System.out.println("RMSD : " + RMSE);
 
-		return RMSD;
+		return RMSE;
 
 	}
-	
-	
-	
-	public static void main(String[] args) {
+
+	public static void run(String learningPath, String testPath){
+
 		CollaborativeFiltering2 cb = new CollaborativeFiltering2();
+		HashMap<String, HashMap<String,Double>> data = cb.dataBasedOnUser(learningPath);
+		cb.testing(data, testPath);
+	}
+
+	public static void main(String[] args) {
+		String path =  System.getProperty("user.dir") + System.getProperty("file.separator")+args[0];
+		String pathTest =  System.getProperty("user.dir") + System.getProperty("file.separator")+args[1];
 		timer();
-		HashMap<String, HashMap<String,Double>> data = cb.dataBasedOnUser(path);
-//		System.out.println(cb.meanVoteMap(data));
-//		System.out.println(cb.listOfUserVotingForParticularMovie(data, "8"));
-		System.out.println(cb.testing(data, pathTest));
+		run(path,pathTest);
 		timer();
 	}
 }
